@@ -47,7 +47,7 @@ def get_args_parser():
     parser.add_argument('--adapt_size', default=8, type=float)
     parser.add_argument('--adapt_scale', default=1.0, type=float)
 
-    parser.add_argument('--batch_size', default=64, type=int,
+    parser.add_argument('--batch_size', default=256, type=int,
                         help='Per GPU batch size')
     parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--update_freq', default=1, type=int,
@@ -56,7 +56,7 @@ def get_args_parser():
     parser.add_argument('--fs_shot', default=16, type=int)
 
     # Model parameters
-    parser.add_argument('--model', default='resnet50_clip', type=str, metavar='MODEL',
+    parser.add_argument('--model', default='resnet18', type=str, metavar='MODEL',
                         help='Name of model to train')
     parser.add_argument('--drop_path', type=float, default=0, metavar='PCT',
                         help='Drop path rate (default: 0.0)')
@@ -198,6 +198,10 @@ def get_args_parser():
                         help="The name of the W&B project where you're sending the new run.")
     parser.add_argument('--wandb_ckpt', type=str2bool, default=False,
                         help="Save model checkpoints as W&B Artifacts.")
+    
+    # Noise arguments
+    parser.add_argument('--noise_sd', type=float, default=0.5,
+                        help="noise")
 
     return parser
 
@@ -404,7 +408,7 @@ def main(args):
             log_writer=log_writer, wandb_logger=wandb_logger, start_steps=epoch * num_training_steps_per_epoch,
             lr_schedule_values=lr_schedule_values, wd_schedule_values=wd_schedule_values,
             num_training_steps_per_epoch=num_training_steps_per_epoch, update_freq=args.update_freq,
-            use_amp=args.use_amp
+            use_amp=args.use_amp, noise_sd=args.noise_sd,
         )
         if args.output_dir and args.save_ckpt:
             if (epoch + 1) % args.save_ckpt_freq == 0 or epoch + 1 == args.epochs:
@@ -412,7 +416,7 @@ def main(args):
                     args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                     loss_scaler=loss_scaler, epoch=epoch, model_ema=model_ema)
         if data_loader_val is not None:
-            test_stats = evaluate(data_loader_val, model, device, use_amp=args.use_amp)
+            test_stats = evaluate(data_loader_val, model, device, use_amp=args.use_amp, noise_sd=args.noise_sd)
             print(f"Accuracy of the model on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
             if max_accuracy < test_stats["acc1"]:
                 max_accuracy = test_stats["acc1"]

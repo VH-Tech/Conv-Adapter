@@ -11,7 +11,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     device: torch.device, epoch: int, loss_scaler, max_norm: float = 0,
                     model_ema: Optional[ModelEma] = None, mixup_fn: Optional[Mixup] = None, log_writer=None,
                     wandb_logger=None, start_steps=None, lr_schedule_values=None, wd_schedule_values=None,
-                    num_training_steps_per_epoch=None, update_freq=None, use_amp=False):
+                    num_training_steps_per_epoch=None, update_freq=None, use_amp=False, noise_sd=0.5):
     model.train(True)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -35,6 +35,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     param_group["weight_decay"] = wd_schedule_values[it]
 
         samples = samples.to(device, non_blocking=True)
+        # add gaussian noise to the input
+        samples = samples + torch.randn_like(samples) * noise_sd
+
         targets = targets.to(device, non_blocking=True)
 
         if mixup_fn is not None:
@@ -132,7 +135,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 @torch.no_grad()
-def evaluate(data_loader, model, device, use_amp=False):
+def evaluate(data_loader, model, device, use_amp=False, noise_sd=0.5):
     criterion = torch.nn.CrossEntropyLoss()
 
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -145,6 +148,9 @@ def evaluate(data_loader, model, device, use_amp=False):
         target = batch[-1]
 
         images = images.to(device, non_blocking=True)
+
+        # add gaussian noise to the input
+        images = images + torch.randn_like(images) * noise_sd
         target = target.to(device, non_blocking=True)
 
         # compute output

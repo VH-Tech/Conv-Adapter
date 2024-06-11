@@ -8,6 +8,7 @@ from torch import Tensor
 from ..tuning_modules import PadPrompter, ConvAdapter, LinearAdapter, ProgramModule
 
 __all__ = [
+    'resnet18',
     'resnet50',
     'resnet50_mocov3',
     'resnet101',
@@ -388,8 +389,8 @@ model_urls = {
 def resnet18(pretrained=False, in_22k=False, **kwargs):
     model = ResNet(Bottleneck, [2, 2, 2, 2], **kwargs)
     if pretrained:
-        checkpoint = torch.load("pretrained/")
-         
+        checkpoint = torch.load("pretrained/resnet18_ckpt.pth")
+        model.load_state_dict(checkpoint['net'])
     return model
 
 def resnet50(pretrained=False, in_22k=False, **kwargs):
