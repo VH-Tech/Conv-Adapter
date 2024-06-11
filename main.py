@@ -145,12 +145,12 @@ def get_args_parser():
 
     # Dataset parameters
     parser.add_argument('--is_tuning', default=False, type=str2bool, help='Hyperparameter Tuning Mode')
-    parser.add_argument('--dataset', default='stanford_cars', type=str, help='dataset name')
-    parser.add_argument('--data_path', default='/media/Auriga/Parameter_Efficient/data/few-shot/stanford_cars', type=str,
+    parser.add_argument('--dataset', default='cifar10', type=str, help='dataset name')
+    parser.add_argument('--data_path', default='/storage/vatsal/datasets/cifar10', type=str,
                         help='dataset path')
     parser.add_argument('--eval_data_path', default=None, type=str,
                         help='dataset path for evaluation')
-    parser.add_argument('--nb_classes', default=1000, type=int,
+    parser.add_argument('--nb_classes', default=10, type=int,
                         help='number of the classification types')
     parser.add_argument('--imagenet_default_mean_and_std', type=str2bool, default=True)
     parser.add_argument('--output_dir', default='./experiments/',

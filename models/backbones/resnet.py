@@ -385,6 +385,12 @@ model_urls = {
     "resnet50_mocov3": "https://dl.fbaipublicfiles.com/moco-v3/r-50-1000ep/r-50-1000ep.pth.tar"
 }
 
+def resnet18(pretrained=False, in_22k=False, **kwargs):
+    model = ResNet(Bottleneck, [2, 2, 2, 2], **kwargs)
+    if pretrained:
+        checkpoint = torch.load("pretrained/")
+         
+    return model
 
 def resnet50(pretrained=False, in_22k=False, **kwargs):
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
