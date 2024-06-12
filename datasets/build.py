@@ -4,9 +4,11 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMA
 from timm.data import create_transform
 
 from .vtab import VTABDataset
-from .fgvc import CUB2011, NABirds, DogsDataset, CarsDataset
 from .fewshot import FewShotDataset
 
+
+_CIFAR10_MEAN = [0.4914, 0.4822, 0.4465]
+_CIFAR10_STDDEV = [0.2023, 0.1994, 0.2010]
 
 def build_transform(args, is_train):
     if is_train:
@@ -76,6 +78,23 @@ def build_transform(args, is_train):
     return transforms.Compose(t)
 
 
+    # t = []
+    # size = int(args.input_size / args.crop_ratio)
+    # if args.dataset == 'dsprites_loc':
+    #     t.append(
+    #         transforms.Resize((args.input_size,args.input_size), interpolation=3)  # to maintain same ratio w.r.t. 224 images
+    #     )
+    # else:
+    #     t.append(
+    #         transforms.Resize((size,size), interpolation=3)  # to maintain same ratio w.r.t. 224 images
+    #     )
+    #     t.append(transforms.CenterCrop(args.input_size))
+    # t.append(transforms.ToTensor())
+    # t.append(transforms.Normalize(_CIFAR10_MEAN, _CIFAR10_STDDEV))
+
+    return transform
+
+
 def build_dataset(args, is_train=True):
     transform = build_transform(args, is_train)
 
@@ -138,22 +157,6 @@ def build_dataset(args, is_train=True):
         elif args.dataset == 'sun397':
             dataset = VTABDataset(args.data_path, train=is_train, transform=transform, is_tuning=args.is_tuning)
             nb_classes = 397
-        else:
-            raise NotImplementedError
-    elif args.data == 'fgvc':
-        # fgvc datasets
-        if args.dataset == 'cub2011':
-            dataset = CUB2011(args.data_path, is_train=is_train, transform=transform, is_tuning=args.is_tuning)
-            nb_classes = 200
-        elif args.dataset == 'dogs':
-            dataset = DogsDataset(root=args.data_path, train=is_train, cropped=False, transform=transform, is_tuning=args.is_tuning)
-            nb_classes = 120
-        elif args.dataset == 'cars':
-            dataset = CarsDataset(root=args.data_path, is_train=is_train, transform=transform, is_tuning=args.is_tuning)
-            nb_classes = 197
-        elif args.dataset == 'nabirds':
-            dataset = NABirds(root=args.data_path, train=is_train, transform=transform, is_tuning=args.is_tuning)
-            nb_classes = 700
         else:
             raise NotImplementedError
     elif args.data == 'clip':

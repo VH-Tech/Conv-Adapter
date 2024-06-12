@@ -389,16 +389,21 @@ model_urls = {
 def resnet18(pretrained=False, in_22k=False, **kwargs):
     model = ResNet(Bottleneck, [2, 2, 2, 2], **kwargs)
     if pretrained:
-        checkpoint = torch.load("pretrained/resnet18_ckpt.pth")
+        checkpoint = torch.load("/home/vatsal/Certified-Robustness/Convnets/Conv-Adapter/models/pretrained/resnet18_ckpt.pth")
         model.load_state_dict(checkpoint['net'])
     return model
 
-def resnet50(pretrained=False, in_22k=False, **kwargs):
+def resnet50(pretrained=False, in_22k=False, finetune="", **kwargs):
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         url = model_urls["resnet50_22k"] if in_22k else model_urls["resnet50_1k"]
         checkpoint = torch.hub.load_state_dict_from_url(url=url, map_location="cpu", check_hash=True)
         keys = model.load_state_dict(checkpoint, strict=False)
+
+    if finetune != "":
+        checkpoint = torch.load(finetune)
+        model.load_state_dict(checkpoint['model'], strict=False)
+        print("Loaded model from", finetune)
          
     return model
 

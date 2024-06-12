@@ -37,9 +37,9 @@ def replace_conv2d_with_my_conv2d(net, ws_eps=None):
 			m.ws_eps = ws_eps
 
 
-def build_model(model_name, pretrained=True, num_classes=1000, input_size=224, tuning_method='full',  args=None, **kwargs):
+def build_model(model_name, pretrained=True, finetune="",num_classes=1000, input_size=224, tuning_method='full',  args=None, **kwargs):
     tuning_config = set_tuning_config(tuning_method, args)
-    model = eval(model_name)(pretrained=pretrained, tuning_config=tuning_config, input_resolution=input_size, **kwargs)
+    model = eval(model_name)(pretrained=pretrained, tuning_config=tuning_config, finetune=finetune, input_resolution=input_size, **kwargs)
     # reinitialize head
     model.head = LinearHead(model.num_features, num_classes, 0.2)# nn.Linear(model.num_features, num_classes)
 

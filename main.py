@@ -19,7 +19,7 @@ from models import build_model
 from datasets import build_dataset
 from engine import train_one_epoch, evaluate
 from utils import NativeScalerWithGradNormCount as NativeScaler
-from memory_utils import profile_memory_cost
+
 import utils
 
 
@@ -60,7 +60,7 @@ def get_args_parser():
                         help='Name of model to train')
     parser.add_argument('--drop_path', type=float, default=0, metavar='PCT',
                         help='Drop path rate (default: 0.0)')
-    parser.add_argument('--input_size', default=224, type=int,
+    parser.add_argument('--input_size', default=32, type=int,
                         help='image input size')
     parser.add_argument('--crop_ratio', default=0.875, type=float,
                         help='image input size')
@@ -135,8 +135,8 @@ def get_args_parser():
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
 
     # * Finetuning params
-    parser.add_argument('--finetune', default='',
-                        help='finetune from checkpoint')
+    parser.add_argument('--resume', default='',
+                        help='resume from checkpoint')
     parser.add_argument('--head_init_scale', default=1.0, type=float,
                         help='classifier head initial scale, typically adjusted in fine-tuning')
     parser.add_argument('--model_key', default='model|module', type=str,
@@ -144,6 +144,7 @@ def get_args_parser():
     parser.add_argument('--model_prefix', default='', type=str)
 
     # Dataset parameters
+    parser.add_argument("--dataset_fraction", type=float, default=1.0)
     parser.add_argument('--is_tuning', default=False, type=str2bool, help='Hyperparameter Tuning Mode')
     parser.add_argument('--dataset', default='cifar10', type=str, help='dataset name')
     parser.add_argument('--data_path', default='/storage/vatsal/datasets/cifar10', type=str,
@@ -161,8 +162,8 @@ def get_args_parser():
                         help='device to use for training / testing')
     parser.add_argument('--seed', default=0, type=int)
 
-    parser.add_argument('--resume', default='',
-                        help='resume from checkpoint')
+    parser.add_argument('--finetune', default='',
+                        help='finetune from checkpoint')
     parser.add_argument('--auto_resume', type=str2bool, default=False)
     parser.add_argument('--save_ckpt', type=str2bool, default=True)
     parser.add_argument('--save_ckpt_freq', default=1, type=int)
@@ -192,20 +193,21 @@ def get_args_parser():
                         help="Use PyTorch's AMP (Automatic Mixed Precision) or not")
 
     # Weights and Biases arguments
-    parser.add_argument('--enable_wandb', type=str2bool, default=False,
+    parser.add_argument('--enable_wandb', type=str2bool, default=True,
                         help="enable logging to Weights and Biases")
-    parser.add_argument('--project', default='parameter_efficient_tuning_cv', type=str,
+    parser.add_argument('--project', default='Base_cifar10', type=str,
                         help="The name of the W&B project where you're sending the new run.")
     parser.add_argument('--wandb_ckpt', type=str2bool, default=False,
                         help="Save model checkpoints as W&B Artifacts.")
     
     # Noise arguments
-    parser.add_argument('--noise_sd', type=float, default=0.5,
+    parser.add_argument('--noise_sd', type=float, default=0.0,
                         help="noise")
 
     return parser
 
 def main(args):
+    args.project = args.dataset + "_" + args.tuning_method + "_" + args.noise_sd + "_" + args.dataset_fraction
     utils.init_distributed_mode(args)
     print(args)
     device = torch.device(args.device)
@@ -215,7 +217,7 @@ def main(args):
     torch.manual_seed(seed)
     np.random.seed(seed)
     cudnn.benchmark = True
-
+    args.data="clip"
     dataset_train, args.nb_classes = build_dataset(args=args, is_train=True)
     if args.disable_eval:
         args.dist_eval = False
@@ -286,29 +288,19 @@ def main(args):
         pretrained=True, 
         num_classes=args.nb_classes, 
         tuning_method=args.tuning_method,
+        finetune=args.finetune,
         args=args,
         )
     # print(model)
-    memory_cost, detailed_info = profile_memory_cost(
-        model, (1, 3, args.input_size, args.input_size), True, activation_bits=32, trainable_param_bits=32,
-        frozen_param_bits=8, batch_size=8,
-    )
-    net_info = {
-        'memory_cost': memory_cost / 1e6,
-        'param_size': detailed_info['param_size'] / 1e6,
-        'act_size': detailed_info['act_size'] / 1e6,
-    }
-    for key, item in net_info.items():
-        print(f"{key}: {item}")
 
-    if args.finetune:
-        if args.finetune.startswith('https'):
+    if args.resume:
+        if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
-                args.finetune, map_location='cpu', check_hash=True)
+                args.resume, map_location='cpu', check_hash=True)
         else:
-            checkpoint = torch.load(args.finetune, map_location='cpu')
+            checkpoint = torch.load(args.resume, map_location='cpu')
 
-        print("Load ckpt from %s" % args.finetune)
+        print("Load ckpt from %s" % args.resume)
         checkpoint_model = None
         for model_key in args.model_key.split('|'):
             if model_key in checkpoint:
